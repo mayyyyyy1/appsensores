@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>SensorLog App</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      color: #1a202c;
+    }
+
+    /* ── PANTALLAS ── */
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    /* ── PANTALLA 1: CONFIGURACIÓN ── */
+    #screen-config {
+      background: linear-gradient(160deg, #1a56db 0%, #0f3fa0 100%);
+      padding: 40px 24px 24px;
+      justify-content: center;
+    }
+
+    .config-box {
+      background: white;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+
+    .app-icon {
+      width: 64px; height: 64px;
+      background: #1a56db;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px;
+      margin: 0 auto 16px;
+    }
+
+    .config-title {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a202c;
+      margin-bottom: 4px;
+    }
+
+    .config-subtitle {
+      text-align: center;
+      font-size: 14px;
+      color: #718096;
+      margin-bottom: 24px;
+    }
+
+    .step-badge {
+      display: inline-block;
+      background: #ebf4ff;
+      color: #1a56db;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4a5568;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .field-hint {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 13px 14px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #1a202c;
+      background: #f7fafc;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 14px;
+    }
+
+    input:focus { border-color: #1a56db; background: white; }
+
+    .divider {
+      height: 1px;
+      background: #e2e8f0;
+      margin: 20px 0;
+    }
+
+    .btn-connect {
+      width: 100%;
+      padding: 16px;
+      background: #1a56db;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-connect:active { transform: scale(0.97); background: #1447b8; }
+    .btn-connect:disabled { background: #a0aec0; cursor: not-allowed; transform: none; }
+
+    .error-msg {
+      background: #fff5f5;
+      border: 1px solid #fc8181;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #c53030;
+      margin-top: 12px;
+      display: none;
+      line-height: 1.5;
+    }
+
+    .help-link {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 13px;
+      color: #718096;
+    }
+
+    .help-link a { color: #1a56db; text-decoration: none; font-weight: 600; }
+
+    /* ── PANTALLA 2: SENSORES ── */
+    #screen-sensors {
+      background: #f0f4f8;
+    }
+
+    .top-bar {
+      background: white;
+      padding: 16px 20px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .top-bar-left { display: flex; align-items: center; gap: 10px; }
+
+    .connected-dot {
+      width: 10px; height: 10px;
+      background: #48bb78;
+      border-radius: 50%;
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .top-bar-title { font-size: 16px; font-weight: 700; color: #1a202c; }
+    .top-bar-sub { font-size: 11px; color: #48bb78; font-weight: 600; }
+
+    .btn-logout {
+      background: none;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: #718096;
+      cursor: pointer;
+    }
+
+    .content { padding: 16px; flex: 1; }
+
+    /* Sensor cards */
+    .sensor-card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .sensor-card.on { border-color: #48bb78; }
+    .sensor-card.on.gps { border-color: #4299e1; }
+    .sensor-card.on.light { border-color: #f6ad55; }
+
+    .sensor-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .sensor-info { display: flex; align-items: center; gap: 10px; }
+
+    .sensor-emoji { font-size: 26px; }
+
+    .sensor-name { font-size: 16px; font-weight: 700; color: #1a202c; }
+    .sensor-status { font-size: 12px; color: #a0aec0; margin-top: 1px; }
+    .sensor-status.on { color: #48bb78; }
+    .sensor-status.on.gps { color: #4299e1; }
+    .sensor-status.on.light { color: #f6ad55; }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative;
+      width: 52px; height: 28px;
+    }
+
+    .toggle input { opacity: 0; width: 0; height: 0; }
+
+    .toggle-track {
+      position: absolute;
+      inset: 0;
+      background: #e2e8f0;
+      border-radius: 28px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .toggle-thumb {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 22px; height: 22px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+      pointer-events: none;
+    }
+
+    .toggle input:checked + .toggle-track { background: #48bb78; }
+    .toggle input:checked + .toggle-track + .toggle-thumb { transform: translateX(24px); }
+    .toggle.gps input:checked + .toggle-track { background: #4299e1; }
+    .toggle.light input:checked + .toggle-track { background: #f6ad55; }
+
+    /* Valores del sensor */
+    .vals-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .vals-row.two { grid-template-columns: repeat(2, 1fr); }
+
+    .val-box {
+      background: #f7fafc;
+      border-radius: 10px;
+      padding: 10px 8px;
+      text-align: center;
+    }
+
+    .val-key {
+      font-size: 10px;
+      font-weight: 700;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .val-num {
+      font-size: 16px;
+      font-weight: 700;
+      color: #cbd5e0;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .val-num.live { color: #2d3748; }
+    .val-num.green { color: #38a169; }
+    .val-num.blue { color: #3182ce; }
+    .val-num.orange { color: #dd6b20; }
+
+    .sim-badge {
+      display: inline-block;
+      background: #fefcbf;
+      color: #744210;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 8px;
+    }
+
+    /* Botón guardar */
+    .save-section {
+      padding: 0 16px 16px;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 18px;
+      background: #1a56db;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-save:active { transform: scale(0.97); background: #1447b8; }
+    .btn-save:disabled { background: #a0aec0; cursor: not-allowed; transform: none; }
+
+    .save-hint {
+      text-align: center;
+      font-size: 12px;
+      color: #a0aec0;
+      margin-top: 8px;
+    }
+
+    /* Historial */
+    .history-section {
+      padding: 0 16px 24px;
+    }
+
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4a5568;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .history-card {
+      background: white;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border-left: 4px solid #1a56db;
+    }
+
+    .history-card.error { border-left-color: #fc8181; }
+
+    .history-time {
+      font-size: 11px;
+      color: #a0aec0;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .history-msg {
+      font-size: 13px;
+      color: #2d3748;
+      line-height: 1.4;
+    }
+
+    .history-msg.ok { color: #276749; font-weight: 600; }
+    .history-msg.err { color: #c53030; }
+
+    .empty-hist {
+      text-align: center;
+      padding: 20px;
+      color: #a0aec0;
+      font-size: 14px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #2d3748;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 30px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 999;
+      transition: transform 0.35s cubic-bezier(.175,.885,.32,1.275);
+      white-space: nowrap;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+
+    .toast.show { transform: translateX(-50%) translateY(0); }
+    .toast.success { background: #276749; }
+    .toast.error { background: #c53030; }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 3px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Permission prompt */
+    .perm-note {
+      background: #ebf8ff;
+      border: 1px solid #90cdf4;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #2c5282;
+      margin-top: 8px;
+      line-height: 1.5;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     PANTALLA 1 — CONFIGURACIÓN SUPABASE
+════════════════════════════════════════════ -->
+<div id="screen-config" class="screen active">
+  <div class="config-box">
+    <div class="app-icon">📡</div>
+    <div class="config-title">SensorLog</div>
+    <div class="config-subtitle">Monitoreo de sensores del teléfono</div>
+
+    <div class="step-badge">Paso 1 — Conectar Supabase</div>
+    <br>
+    <label class="field-label">URL del Proyecto</label>
+    <span class="field-hint">Ejemplo: https://abcdef.supabase.co</span>
+    <input type="text" id="inputUrl" placeholder="https://tu-proyecto.supabase.co"
+           autocomplete="off" autocorrect="off" spellcheck="false" />
+
+    <label class="field-label">Clave Anon (API Key)</label>
+    <span class="field-hint">La encuentras en Settings → API → anon public</span>
+    <input type="password" id="inputKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+
+    <div class="divider"></div>
+
+    <button class="btn-connect" id="btnConnect" onclick="conectar()">
+      Conectar y continuar →
+    </button>
+
+    <div class="error-msg" id="errMsg"></div>
+
+    <div class="help-link">
+      ¿No tienes Supabase? <a href="https://supabase.com" target="_blank">Créalo gratis aquí</a>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PANTALLA 2 — SENSORES
+════════════════════════════════════════════ -->
+<div id="screen-sensors" class="screen">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="connected-dot"></div>
+      <div>
+        <div class="top-bar-title">SensorLog 📡</div>
+        <div class="top-bar-sub">✓ Supabase conectado</div>
+      </div>
+    </div>
+    <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+  </div>
+
+  <div class="content">
+
+    <!-- SENSOR 1: ACELERÓMETRO -->
+    <div class="sensor-card" id="card-accel">
+      <div class="sensor-top">
+        <div class="sensor-info">
+          <div class="sensor-emoji">📐</div>
+          <div>
+            <div class="sensor-name">Acelerómetro</div>
+            <div class="sensor-status" id="status-accel">Apagado</div>
+          </div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="tog-accel" onchange="toggleAccel(this.checked)" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="vals-row">
+        <div class="val-box">
+          <div class="val-key">Eje X</div>
+          <div class="val-num" id="v-ax">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Eje Y</div>
+          <div class="val-num" id="v-ay">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Eje Z</div>
+          <div class="val-num" id="v-az">—</div>
+        </div>
+      </div>
+      <div class="perm-note" id="perm-accel">
+        📲 Toca el toggle → el navegador te pedirá permiso → acepta para ver los datos.
+      </div>
+    </div>
+
+    <!-- SENSOR 2: GPS -->
+    <div class="sensor-card" id="card-gps">
+      <div class="sensor-top">
+        <div class="sensor-info">
+          <div class="sensor-emoji">🛰️</div>
+          <div>
+            <div class="sensor-name">GPS / Ubicación</div>
+            <div class="sensor-status gps" id="status-gps">Apagado</div>
+          </div>
+        </div>
+        <label class="toggle gps">
+          <input type="checkbox" id="tog-gps" onchange="toggleGPS(this.checked)" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="vals-row two">
+        <div class="val-box">
+          <div class="val-key">Latitud</div>
+          <div class="val-num" id="v-lat">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Longitud</div>
+          <div class="val-num" id="v-lng">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Altitud</div>
+          <div class="val-num" id="v-alt">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Precisión</div>
+          <div class="val-num" id="v-acc">—</div>
+        </div>
+      </div>
+      <div class="perm-note" id="perm-gps">
+        📍 El navegador pedirá permiso de ubicación → toca <b>Permitir</b>.
+      </div>
+    </div>
+
+    <!-- SENSOR 3: LUZ AMBIENTAL -->
+    <div class="sensor-card" id="card-light">
+      <div class="sensor-top">
+        <div class="sensor-info">
+          <div class="sensor-emoji">☀️</div>
+          <div>
+            <div class="sensor-name">Luz Ambiental</div>
+            <div class="sensor-status light" id="status-light">Apagado</div>
+          </div>
+        </div>
+        <label class="toggle light">
+          <input type="checkbox" id="tog-light" onchange="toggleLight(this.checked)" />
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+      <div class="vals-row two">
+        <div class="val-box">
+          <div class="val-key">Lux</div>
+          <div class="val-num" id="v-lux">—</div>
+        </div>
+        <div class="val-box">
+          <div class="val-key">Nivel</div>
+          <div class="val-num" id="v-nivel">—</div>
+        </div>
+      </div>
+      <div id="sim-note" class="sim-badge" style="display:none">
+        ⚡ Simulado (sensor no disponible en este dispositivo)
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- BOTÓN GUARDAR -->
+  <div class="save-section">
+    <button class="btn-save" id="btnSave" onclick="guardarDatos()">
+      💾 Guardar en Supabase
+    </button>
+    <div class="save-hint">Guarda todos los sensores activos en tu base de datos</div>
+  </div>
+
+  <!-- HISTORIAL -->
+  <div class="history-section">
+    <div class="section-title">📋 Historial de guardados</div>
+    <div id="historial">
+      <div class="empty-hist">Aún no has guardado ninguna lectura</div>
+    </div>
+  </div>
+
+</div><!-- /screen-sensors -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Estado global ────────────────────────────
+let SUPA_URL = '';
+let SUPA_KEY = '';
+let watchGPS = null;
+let lightInterval = null;
+let historial = [];
+
+const datos = {
+  ax: null, ay: null, az: null,
+  lat: null, lng: null, alt: null, acc: null,
+  lux: null
+};
+
+// ── PANTALLA 1: Conectar Supabase ────────────
+async function conectar() {
+  const url = document.getElementById('inputUrl').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('inputKey').value.trim();
+  const btn = document.getElementById('btnConnect');
+  const err = document.getElementById('errMsg');
+
+  err.style.display = 'none';
+
+  if (!url || !url.includes('supabase.co')) {
+    mostrarError('La URL debe ser tu proyecto de Supabase, ejemplo:\nhttps://abcdef.supabase.co');
+    return;
+  }
+  if (!key || key.length < 50) {
+    mostrarError('La clave API parece incorrecta. Cópiala desde Supabase → Settings → API → anon public');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Conectando...';
+
+  // Probar conexión real haciendo un SELECT a la tabla
+  try {
+    const resp = await fetch(`${url}/rest/v1/sensor_readings?limit=1`, {
+      headers: {
+        'apikey': key,
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (resp.status === 401) {
+      throw new Error('Clave API incorrecta. Ve a Supabase → Settings → API → copia la clave "anon public".');
+    }
+    if (resp.status === 404 || resp.status === 400) {
+      throw new Error('La tabla "sensor_readings" no existe. Ejecuta el SQL que se te dio para crearla en Supabase → SQL Editor.');
+    }
+    if (!resp.ok && resp.status !== 406) {
+      const txt = await resp.text();
+      throw new Error(`Error ${resp.status}: ${txt.substring(0, 100)}`);
+    }
+
+    // Éxito
+    SUPA_URL = url;
+    SUPA_KEY = key;
+    mostrarPantalla('screen-sensors');
+    toast('✓ Conectado a Supabase', 'success');
+
+  } catch(e) {
+    mostrarError(e.message || 'No se pudo conectar. Revisa tu URL y clave.');
+    btn.disabled = false;
+    btn.innerHTML = 'Conectar y continuar →';
+  }
+}
+
+function mostrarError(msg) {
+  const el = document.getElementById('errMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function cerrarSesion() {
+  SUPA_URL = ''; SUPA_KEY = '';
+  // Apagar sensores
+  if (watchGPS) { navigator.geolocation.clearWatch(watchGPS); watchGPS = null; }
+  if (lightInterval) { clearInterval(lightInterval); lightInterval = null; }
+  window.removeEventListener('devicemotion', onMotion);
+  document.getElementById('tog-accel').checked = false;
+  document.getElementById('tog-gps').checked = false;
+  document.getElementById('tog-light').checked = false;
+  mostrarPantalla('screen-config');
+}
+
+// ── SENSOR 1: Acelerómetro ───────────────────
+function toggleAccel(on) {
+  const card = document.getElementById('card-accel');
+  const status = document.getElementById('status-accel');
+  const perm = document.getElementById('perm-accel');
+
+  if (on) {
+    perm.style.display = 'block';
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      // iOS 13+
+      DeviceMotionEvent.requestPermission()
+        .then(s => {
+          if (s === 'granted') { iniciarAccel(); }
+          else { apagarToggle('tog-accel'); toast('Permiso denegado', 'error'); }
+        }).catch(() => { apagarToggle('tog-accel'); });
+    } else if (typeof DeviceMotionEvent !== 'undefined') {
+      iniciarAccel();
+    } else {
+      // Simular para escritorio
+      iniciarAccelSim();
+    }
+  } else {
+    window.removeEventListener('devicemotion', onMotion);
+    if (window._accelSim) { clearInterval(window._accelSim); }
+    card.classList.remove('on');
+    status.textContent = 'Apagado';
+    status.classList.remove('on');
+    perm.style.display = 'none';
+    setVals(['v-ax','v-ay','v-az'], ['—','—','—'], false);
+  }
+}
+
+function iniciarAccel() {
+  window.addEventListener('devicemotion', onMotion);
+  activarCard('card-accel', 'status-accel', 'Leyendo movimiento...', false);
+  document.getElementById('perm-accel').style.display = 'none';
+}
+
+function iniciarAccelSim() {
+  // En computadora simular movimiento
+  window._accelSim = setInterval(() => {
+    const e = {
+      accelerationIncludingGravity: {
+        x: (Math.random()*4-2).toFixed(2),
+        y: (Math.random()*4-2+9.8).toFixed(2),
+        z: (Math.random()*2-1).toFixed(2)
+      }
+    };
+    onMotion(e);
+  }, 500);
+  activarCard('card-accel', 'status-accel', 'Simulando (escritorio)', false);
+  document.getElementById('perm-accel').style.display = 'none';
+}
+
+function onMotion(e) {
+  const a = e.accelerationIncludingGravity;
+  if (!a) return;
+  datos.ax = parseFloat(a.x || 0).toFixed(2);
+  datos.ay = parseFloat(a.y || 0).toFixed(2);
+  datos.az = parseFloat(a.z || 0).toFixed(2);
+  document.getElementById('v-ax').textContent = datos.ax;
+  document.getElementById('v-ay').textContent = datos.ay;
+  document.getElementById('v-az').textContent = datos.az;
+  document.getElementById('v-ax').className = 'val-num green';
+  document.getElementById('v-ay').className = 'val-num green';
+  document.getElementById('v-az').className = 'val-num green';
+}
+
+// ── SENSOR 2: GPS ────────────────────────────
+function toggleGPS(on) {
+  const perm = document.getElementById('perm-gps');
+  if (on) {
+    perm.style.display = 'block';
+    if (!navigator.geolocation) {
+      apagarToggle('tog-gps');
+      toast('GPS no disponible en este dispositivo', 'error');
+      return;
+    }
+    watchGPS = navigator.geolocation.watchPosition(onGPS, onGPSError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 5000
+    });
+    activarCard('card-gps', 'status-gps', 'Buscando señal GPS...', true);
+  } else {
+    if (watchGPS) { navigator.geolocation.clearWatch(watchGPS); watchGPS = null; }
+    document.getElementById('card-gps').classList.remove('on');
+    document.getElementById('status-gps').textContent = 'Apagado';
+    document.getElementById('status-gps').classList.remove('on');
+    perm.style.display = 'none';
+    setVals(['v-lat','v-lng','v-alt','v-acc'], ['—','—','—','—'], false);
+  }
+}
+
+function onGPS(pos) {
+  const c = pos.coords;
+  datos.lat = c.latitude.toFixed(5);
+  datos.lng = c.longitude.toFixed(5);
+  datos.alt = c.altitude ? c.altitude.toFixed(1) : '0';
+  datos.acc = c.accuracy.toFixed(0);
+  document.getElementById('v-lat').textContent = datos.lat;
+  document.getElementById('v-lng').textContent = datos.lng;
+  document.getElementById('v-alt').textContent = datos.alt + 'm';
+  document.getElementById('v-acc').textContent = '±' + datos.acc + 'm';
+  ['v-lat','v-lng','v-alt','v-acc'].forEach(id => {
+    document.getElementById(id).className = 'val-num blue';
+  });
+  document.getElementById('status-gps').textContent = '✓ Señal GPS obtenida';
+  document.getElementById('perm-gps').style.display = 'none';
+}
+
+function onGPSError(e) {
+  document.getElementById('status-gps').textContent = 'Error: ' + e.message;
+  toast('GPS: ' + e.message, 'error');
+}
+
+// ── SENSOR 3: Luz ambiental ──────────────────
+function toggleLight(on) {
+  if (on) {
+    // Intentar sensor real
+    if ('AmbientLightSensor' in window) {
+      try {
+        const sensor = new AmbientLightSensor();
+        sensor.onreading = () => updateLuz(sensor.illuminance);
+        sensor.onerror = () => iniciarLuzSim();
+        sensor.start();
+        activarCard('card-light', 'status-light', 'Leyendo luz...', false);
+      } catch { iniciarLuzSim(); }
+    } else {
+      iniciarLuzSim();
+    }
+  } else {
+    if (lightInterval) { clearInterval(lightInterval); lightInterval = null; }
+    document.getElementById('card-light').classList.remove('on');
+    document.getElementById('status-light').textContent = 'Apagado';
+    document.getElementById('status-light').classList.remove('on');
+    document.getElementById('sim-note').style.display = 'none';
+    setVals(['v-lux','v-nivel'], ['—','—'], false);
+  }
+}
+
+function iniciarLuzSim() {
+  document.getElementById('sim-note').style.display = 'inline-block';
+  activarCard('card-light', 'status-light', 'Simulando luz...', false);
+  lightInterval = setInterval(() => {
+    const hora = new Date().getHours();
+    const base = (hora >= 7 && hora <= 19) ? 350 : 15;
+    updateLuz(Math.max(0, base + Math.random()*180 - 90));
+  }, 1500);
+  updateLuz(350);
+}
+
+function updateLuz(lux) {
+  datos.lux = lux.toFixed(1);
+  let nivel = lux < 30 ? '🌑 Oscuro' : lux < 200 ? '🌥 Interior' : lux < 800 ? '☁ Brillante' : '☀ Solar';
+  document.getElementById('v-lux').textContent = Math.round(lux) + ' lx';
+  document.getElementById('v-nivel').textContent = nivel;
+  document.getElementById('v-lux').className = 'val-num orange';
+  document.getElementById('v-nivel').className = 'val-num orange';
+}
+
+// ── GUARDAR EN SUPABASE ──────────────────────
+async function guardarDatos() {
+  const btn = document.getElementById('btnSave');
+
+  const hayDatos = datos.ax || datos.lat || datos.lux;
+  if (!hayDatos) {
+    toast('Activa al menos un sensor primero', 'error');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Guardando...';
+
+  const payload = {
+    timestamp: new Date().toISOString(),
+    accel_x: datos.ax ? parseFloat(datos.ax) : null,
+    accel_y: datos.ay ? parseFloat(datos.ay) : null,
+    accel_z: datos.az ? parseFloat(datos.az) : null,
+    gps_lat: datos.lat ? parseFloat(datos.lat) : null,
+    gps_lng: datos.lng ? parseFloat(datos.lng) : null,
+    gps_alt: datos.alt ? parseFloat(datos.alt) : null,
+    gps_accuracy: datos.acc ? parseFloat(datos.acc) : null,
+    light_lux: datos.lux ? parseFloat(datos.lux) : null,
+    device: navigator.userAgent.substring(0, 120)
+  };
+
+  try {
+    const resp = await fetch(`${SUPA_URL}/rest/v1/sensor_readings`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': `Bearer ${SUPA_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(txt.substring(0, 150));
+    }
+
+    agregarHistorial(`✓ Guardado — Accel(${datos.ax},${datos.ay}) GPS(${datos.lat},${datos.lng}) Luz:${datos.lux}lx`, true);
+    toast('✓ Guardado en Supabase', 'success');
+
+  } catch(e) {
+    agregarHistorial('✗ Error: ' + e.message, false);
+    toast('Error al guardar', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '💾 Guardar en Supabase';
+  }
+}
+
+// ── Helpers UI ───────────────────────────────
+function mostrarPantalla(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function activarCard(cardId, statusId, msg, isGps) {
+  document.getElementById(cardId).classList.add('on');
+  const st = document.getElementById(statusId);
+  st.textContent = msg;
+  st.classList.add('on');
+  if (isGps) st.classList.add('gps');
+}
+
+function apagarToggle(id) {
+  document.getElementById(id).checked = false;
+}
+
+function setVals(ids, vals, active) {
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    el.textContent = vals[i];
+    el.className = active ? 'val-num live' : 'val-num';
+  });
+}
+
+function agregarHistorial(msg, ok) {
+  historial.unshift({ msg, ok, hora: new Date().toLocaleTimeString() });
+  if (historial.length > 10) historial.pop();
+  const el = document.getElementById('historial');
+  el.innerHTML = historial.map(h => `
+    <div class="history-card ${h.ok ? '' : 'error'}">
+      <div class="history-time">${h.hora}</div>
+      <div class="history-msg ${h.ok ? 'ok' : 'err'}">${h.msg}</div>
+    </div>
+  `).join('');
+}
+
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// Enter en inputs para conectar
+document.getElementById('inputKey').addEventListener('keydown', e => {
+  if (e.key === 'Enter') conectar();
+});
+</script>
+</body>
+</html>
